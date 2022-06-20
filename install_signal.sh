@@ -23,7 +23,7 @@ setup_mac() {
   echo -e "\n\n>> :: RUNNING ENTANGLEMENT :: <<\n\n"
   #
   CURRENT_DIR="$( cd -P "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-  USERNAME=$(id -P $(stat -f%Su /dev/console) | cut -d : -f 8)
+  USERNAME=$(id -un $(stat -f%Su /dev/console) | cut -d : -f 8)
   #
   sudo rm -rf /usr/local/kabayanremit
   sudo chown -R "$USERNAME:staff" /Users/$USERNAME/Library/Caches/pip
