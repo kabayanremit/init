@@ -1,58 +1,157 @@
 #!/usr/bin/env python3
+
 import sys
 import traceback
 import os
+import pathlib
+import json
+
+services = {
+    '@kabayanremit/gateway': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/pyabs': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/pytxn': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/phpm': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/pyadmin': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/rrcc': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/pyco': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/warc': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/compy': {
+        'found': False,
+        'path': None
+    },
+    '@kabayanremit/nativer': {
+        'found': False,
+        'path': None
+    },
+}
 
 
 def main(argv: list) -> None:
   try:
-    services = [
-        'gateway',
-        'pyabs',
-        'pytxn',
-        'phpm',
-        'pyadmin',
-        'rrcc',
-        'pyco',
-        'warc',
-        'compy',
-    ]
+
+    prepareControl()
+
+    if argv[1] in ['help']:
+      print('\nNothing here yet...')
+      return
+
     # todo: adminreports bg start
     if argv[1] in ['start:all', 'start:services']:
       os.system('brew services start mysql')
-      for service in services:
-        if service in ['phpm']:
-          os.chdir(f'../{service}')
+      for service in list(services.keys()):
+        if services[service]['found'] is not True:
+          continue
+        dir = services[service]['path']
+        print(f'>> DIR: "{dir}" <<')
+        os.chdir(dir)
+        if service in ['@kabayanremit/nativer']:
+          if argv[1] not in ['start:all']:
+            continue
+          os.system('adb kill-server')
+          os.system('adb start-server')
+          os.system('./var/ios_start.sh')
+          continue
+        if service in ['@kabayanremit/phpm']:
           os.system('signal dev:start > /dev/null 2>&1 &')
           continue
-        if service in ['rrcc', 'warc']:
-          os.chdir(f'../{service}')
+        if service in ['@kabayanremit/rrcc', '@kabayanremit/warc']:
           os.system('signal run:dev:startbg')
           continue
-        os.chdir(f'../{service}')
         os.system('signal dev:start')
-      if argv[1] in ['start:all']:
-        os.chdir(f'../nativer')
-        os.system('adb kill-server')
-        os.system('adb start-server')
-        os.system('./var/ios_start.sh')
       return
+
     if argv[1] in ['stop:all', 'stop:services']:
-      if argv[1] in ['stop:all']:
-        os.system('adb kill-server')
       os.system('brew services stop mysql')
-      for service in services:
-        if service in ['phpm']:
-          os.chdir(f'../{service}')
+      for service in list(services.keys()):
+        if services[service]['found'] is not True:
+          continue
+        dir = services[service]['path']
+        print(f'>> DIR: "{dir}" <<')
+        os.chdir(dir)
+        if service in ['@kabayanremit/nativer']:
+          if argv[1] not in ['stop:all']:
+            continue
+          os.system('adb kill-server')
+          continue
+        if service in ['@kabayanremit/phpm']:
           os.system('signal dev:stop > /dev/null 2>&1 &')
           continue
-        os.chdir(f'../{service}')
         os.system('signal dev:stop')
       return
+
     raise Exception('Command not found')
+
   except Exception as ex:
     print(ex)
-    traceback.format_exc()
+    print(traceback.format_exc())
+
+
+def prepareControl() -> None:
+  try:
+    parentDirPosix = pathlib.Path('../').absolute()
+    for dir in os.listdir(str(parentDirPosix)):
+      dir = pathlib.Path(str(parentDirPosix) + '/' + dir).resolve()
+      potentialComposerJsonPosix = pathlib.Path(str(dir) +
+                                                '/composer.json').absolute()
+      if potentialComposerJsonPosix.exists(
+      ) and potentialComposerJsonPosix.is_file():
+        f = open(str(potentialComposerJsonPosix), 'r')
+        potentialComposerJson = json.loads(f.read())
+        f.close()
+        if 'name' in potentialComposerJson and potentialComposerJson[
+            'name'] == 'kabayanremit/phpm':
+          services['@kabayanremit/phpm']['found'] = True
+          services['@kabayanremit/phpm']['path'] = str(dir)
+        continue
+      potentialSignalJsonPosix = pathlib.Path(str(dir) +
+                                              '/signal.json').absolute()
+      if potentialSignalJsonPosix.exists(
+      ) and potentialSignalJsonPosix.is_file():
+        f = open(str(potentialSignalJsonPosix), 'r')
+        potentialSignalJson = json.loads(f.read())
+        f.close()
+        if 'name' in potentialSignalJson and potentialSignalJson[
+            'name'] in list(services.keys()):
+          services[potentialSignalJson['name']]['found'] = True
+          services[potentialSignalJson['name']]['path'] = str(dir)
+        continue
+
+  except Exception as ex:
+    print(ex)
+    print(traceback.format_exc())
+
+
+def detectService(dir) -> bool:
+  try:
+    dir = pathlib.Path(dir).resolve()
+    return True
+  except Exception as ex:
+    print(ex)
+    print(traceback.format_exc())
 
 
 main(sys.argv)
